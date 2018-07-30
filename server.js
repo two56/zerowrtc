@@ -5,15 +5,15 @@ const https = require('https');
 
 const wss = new ws.Server({
 	server:	https.createServer({
-			key:	fs.readFileSync('signalling/key.pem'),
-			cert:	fs.readFileSync('signalling/cert.pem')
+			key:	fs.readFileSync('key.pem'),
+			cert:	fs.readFileSync('cert.pem')
 		}).listen(8443, '0.0.0.0')
 });
 
 https.createServer(
 	{
-		key:	fs.readFileSync('signalling/key.pem'),
-		cert:	fs.readFileSync('signalling/cert.pem')
+		key:	fs.readFileSync('key.pem'),
+		cert:	fs.readFileSync('cert.pem')
 	},
 	(request, response) => {
 		let pathName = url.parse(request.url).pathname.substr(1);
@@ -45,7 +45,10 @@ wss.on('connection',
 		);
 		ws.on('close',
 			() => {
-console.log('close', ws.id);
+				Array.from(wss.clients).find((client) => client.isServer === true).send(JSON.stringify({
+					type:	'DISCONNECT',
+					id:	ws.id
+				}));
 			}
 		);
 		ws.on('message',
@@ -76,13 +79,17 @@ console.log('MESSAGE', message);
 const interval = setInterval(
 	() => {
 		wss.clients.forEach(
-			(ws) => {
-				if ( ws.isAlive === false ) {
-console.log('terminate', ws.id);
-					return ws.terminate();
+			(client) => {
+				if ( client.isAlive === false ) {
+console.log('terminate', client.id);
+					Array.from(wss.clients).find((client) => client.isServer === true).send(JSON.stringify({
+						type:	'DISCONNECT',
+						id:	client.id
+					}));
+					return client.terminate();
 				}
-				ws.isAlive = false;
-				ws.ping(() => {});
+				client.isAlive = false;
+				client.ping(() => {});
 			}
 		);
 	},

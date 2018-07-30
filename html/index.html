@@ -6,6 +6,11 @@
 			margin:			0px;
 		}
 
+		video {
+			width:			100%;
+			height:			100%;
+		}
+
 		.receive {
 			width:			100%;
 			height:			100%;
@@ -13,16 +18,30 @@
 			justify-content:	center;
 			align-items:		center;
 		}
+
+		.recieve > div {
+			position:		relative;
+			width:			100%;
+			padding-top:		56.25%;
+		}
+
+		.recieve > div > div {
+			position:		absolute;
+			width:			100%;
+			height:			100%;
+		}
 	</style>
 </head>
 <body>
-	<div class="receive">
-		<div>
+	<iframe>
+		<div class="receive">
 			<div>
-				<video id="receive" autoplay></video>
+				<div>
+					<video id="receive" autoplay></video>
+				</div>
 			</div>
 		</div>
-	</div>
+	</iframe>
 	<script src="/js/main.js"></script>
 </body>
 <html>

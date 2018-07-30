@@ -93,11 +93,12 @@ class WebRTCClient:
 			if msg['type'] == 'CONNECT' and self.pipe is None:
 				self.clientid = msg['src']
 				self.start_pipeline()
-			elif msg['type'] == 'DISCONNECT' and self.pipe is not None:
-				self.pipe.set_state(Gst.State.NULL)
-				self.clientid = None
-                                #self.webrtc = None
-                                #self.pipe = None
+			elif msg['type'] == 'DISCONNECT' and self.pipe is not None and msg['id'] == self.clientid:
+                                print ('DISCONNECT')
+                                self.pipe.set_state(Gst.State.NULL)
+                                self.clientid = None
+                                self.webrtc = None
+                                self.pipe = None
 			elif msg['type'] == 'SDP':
 				await self.handle_sdp(msg['data'])
 			elif msg['type'] == 'ICE':
