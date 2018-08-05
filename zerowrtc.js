@@ -1,9 +1,14 @@
-const ws = require('ws');
 const fs = require('fs');
 const url = require('url');
 const https = require('https');
+const WebSocket = require('ws');
+const {spawn, exec} = require('child_process');
 
-const wss = new ws.Server({
+exec('/usr/bin/v4l2-ctl --set-ctrl=h264_profile=1');
+exec('/usr/bin/v4l2-ctl --set-ctrl=h264_level=9');
+exec('/usr/bin/v4l2-ctl --set-ctrl=video_bitrate=1500000');
+
+const wss = new WebSocket.Server({
 	server:	https.createServer({
 			key:	fs.readFileSync('key.pem'),
 			cert:	fs.readFileSync('cert.pem')
@@ -45,6 +50,7 @@ wss.on('connection',
 		);
 		ws.on('close',
 			() => {
+console.log('DISCONNECT', ws.id);
 				Array.from(wss.clients).find((client) => client.isServer === true).send(JSON.stringify({
 					type:	'DISCONNECT',
 					id:	ws.id
@@ -53,7 +59,6 @@ wss.on('connection',
 		);
 		ws.on('message',
 			(message) => {
-console.log('MESSAGE', message);
 				let msg;
 				try {
 					msg = JSON.parse(message);
@@ -61,16 +66,33 @@ console.log('MESSAGE', message);
 					return console.log(err);
 				}
 				const clients = Array.from(wss.clients);
+console.log('MESSAGE', msg);
 				if ( msg.type == 'REGISTER' ) {
 					Object.assign(ws, {id: msg.id, isServer: msg.isServer || false, isAlive: true});
-					ws.send(JSON.stringify({
-						type:	'SERVER',
-						id:	clients.find((client) => client.isServer === true).id
-					}));
+					if ( clients.reduce((count, client) => count += client.readyState == WebSocket.OPEN, 0) > 2 ) {
+						ws.send(JSON.stringify({
+							type:		'ERROR',
+							message:	'Too many clients connected.'
+						}));
+						return;
+					}
+					if ( ! msg.isServer ) {
+						if ( ! clients.some((client) => client.isServer === true) ) {
+							ws.send(JSON.stringify({
+								type:		'ERROR',
+								message:	'No servers connected.'
+							}));
+							return;
+						}
+						ws.send(JSON.stringify({
+							type:		'SERVER',
+							id:		clients.find((client) => client.isServer === true).id
+						}));
+					}
 				} else if ( clients.some((client) => client.id == msg.dst) )
 					clients.find((client) => client.id == msg.dst).send(message);
 				else
-					ws.send(JSON.stringify({type: 'ERROR', message: 'Unknown message.'}));
+					ws.send(JSON.stringify({type: 'ERROR', message: 'Unknown message or destination.'}));
 			}
 		);
 	}
@@ -79,21 +101,39 @@ console.log('MESSAGE', message);
 const interval = setInterval(
 	() => {
 		wss.clients.forEach(
-			(client) => {
-				if ( client.isAlive === false ) {
-console.log('terminate', client.id);
+			(ws) => {
+				if ( ws.isAlive === false ) {
+console.log('TERMINATE', client.id);
 					Array.from(wss.clients).find((client) => client.isServer === true).send(JSON.stringify({
 						type:	'DISCONNECT',
 						id:	client.id
 					}));
-					return client.terminate();
+					return ws.terminate();
 				}
-				client.isAlive = false;
-				client.ping(() => {});
+				ws.isAlive = false;
+				ws.ping(() => {});
 			}
 		);
 	},
 	15000
 );
 
+const gst_client = spawn('/usr/bin/python3', ['/srv/zerowrtc/gst-client.py']);
 
+gst_client.stdout.on('data',
+	(data) => {
+		console.log('gst-client.py stdout: ' + data);
+	}
+);
+
+gst_client.stderr.on('data',
+	(data) => {
+		console.log('gst-client.py stderr: ' + data);
+	}
+);
+
+gst_client.on('close',
+	(code) => {
+		console.log('gst-client.py exited with code ' + code);
+	}
+);
