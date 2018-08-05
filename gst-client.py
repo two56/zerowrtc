@@ -16,7 +16,7 @@ gi.require_version('GstSdp', '1.0')
 from gi.repository import GstSdp
 
 PIPELINE_DESC = '''
-v4l2src device=/dev/video0 ! video/x-h264, width=640, height=360, framerate=30/1 ! h264parse config-interval=1 ! rtph264pay pt=102 ! queue ! application/x-rtp,media=video,encoding-name=H264,payload=102 ! webrtcbin name=sendrecv
+v4l2src device=/dev/video0 ! video/x-h264, width=768, height=432, framerate=20/1 ! h264parse config-interval=1 ! rtph264pay pt=102 ! queue ! application/x-rtp,media=video,encoding-name=H264,payload=102 ! webrtcbin name=sendrecv
 '''
 
 class WebRTCClient:

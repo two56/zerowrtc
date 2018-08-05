@@ -6,7 +6,8 @@ const {spawn, exec} = require('child_process');
 
 exec('/usr/bin/v4l2-ctl --set-ctrl=h264_profile=1');
 exec('/usr/bin/v4l2-ctl --set-ctrl=h264_level=9');
-exec('/usr/bin/v4l2-ctl --set-ctrl=video_bitrate=1500000');
+exec('/usr/bin/v4l2-ctl --set-ctrl=video_bitrate=7680000');
+exec('/usr/bin/v4l2-ctl --set-ctrl=h264_i_frame_period=10');
 
 const wss = new WebSocket.Server({
 	server:	https.createServer({
@@ -103,10 +104,10 @@ const interval = setInterval(
 		wss.clients.forEach(
 			(ws) => {
 				if ( ws.isAlive === false ) {
-console.log('TERMINATE', client.id);
+console.log('TERMINATE', ws.id);
 					Array.from(wss.clients).find((client) => client.isServer === true).send(JSON.stringify({
 						type:	'DISCONNECT',
-						id:	client.id
+						id:	ws.id
 					}));
 					return ws.terminate();
 				}
